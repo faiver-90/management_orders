@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Awaitable, Callable
-from typing import Any, cast
+from typing import Any
 
 import pytest
 from httpx import AsyncClient
@@ -37,6 +37,7 @@ async def test_order_flow_and_cache(
     register_and_login: Callable[[str, str], Awaitable[str]],
     fake_redis: FakeRedis,
     db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Create -> get (forced cache miss) -> get (cache hit) -> update -> list.
 
@@ -66,7 +67,7 @@ async def test_order_flow_and_cache(
         execute_calls["count"] += 1
         return await orig_execute(*args, **kwargs)
 
-    db_session.execute = cast(Any, _execute_spy)
+    monkeypatch.setattr(db_session, "execute", _execute_spy)
 
     # First GET: cache miss -> DB hit
     fake_redis.get_calls = 0
