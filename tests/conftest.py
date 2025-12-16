@@ -11,7 +11,8 @@ Notes about FastAPI-Limiter:
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
+from typing import Any, cast
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -147,3 +148,16 @@ async def client(
         yield ac
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def register_and_login(client: AsyncClient) -> Callable[[str, str], Awaitable[str]]:
+    """Factory-fixture: register user and return access_token."""
+
+    async def _register_and_login(email: str, password: str) -> str:
+        await client.post("/register/", json={"email": email, "password": password})
+        token_resp = await client.post("/token/", json={"email": email, "password": password})
+        data: dict[str, Any] = token_resp.json()
+        return cast(str, data["access_token"])
+
+    return _register_and_login

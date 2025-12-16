@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import uuid
 
-import pytest
-
 from app.services.messaging import NewOrderEvent
 from tests.conftest import FakePublisher
 
@@ -18,7 +16,6 @@ def test_new_order_event_bytes() -> None:
     assert body.startswith("{") and body.endswith("}")
 
 
-@pytest.mark.asyncio
 async def test_fake_publisher_collects(fake_publisher: FakePublisher) -> None:
     """FakePublisher should collect published order ids."""
     oid = uuid.uuid4()

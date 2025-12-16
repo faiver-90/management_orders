@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Awaitable, Callable
 from typing import Any, cast
 
 import pytest
@@ -11,23 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import OrderStatus
 from tests.conftest import FakeRedis
-
-
-async def register_and_login(client: AsyncClient, email: str, password: str) -> str:
-    """Register a user and obtain JWT token.
-
-    Important:
-        `/token/` expects a JSON body compatible with `UserCreate`,
-        not `application/x-www-form-urlencoded`.
-    """
-    r = await client.post("/register/", json={"email": email, "password": password})
-    assert r.status_code == 200
-
-    token_resp = await client.post("/token/", json={"email": email, "password": password})
-    assert token_resp.status_code == 200
-
-    payload = cast(dict[str, Any], token_resp.json())
-    return cast(str, payload["access_token"])
 
 
 @pytest.mark.asyncio
@@ -41,25 +25,24 @@ async def test_register_duplicate(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_login_bad_password(client: AsyncClient) -> None:
-    """Login with wrong password must fail."""
+    """Login with wrong password must fail (but schema-valid password)."""
     await client.post("/register/", json={"email": "b@b.com", "password": "secret12"})
-    r = await client.post(
-        "/token/",
-        data={"username": "b@b.com", "password": "wrong"},
-        headers={"content-type": "application/x-www-form-urlencoded"},
-    )
-    assert r.status_code == 422
+    r = await client.post("/token/", json={"email": "b@b.com", "password": "wrong12"})
+    assert r.status_code == 401
 
 
 @pytest.mark.asyncio
 async def test_order_flow_and_cache(
-    client: AsyncClient, fake_redis: FakeRedis, db_session: AsyncSession
+    client: AsyncClient,
+    register_and_login: Callable[[str, str], Awaitable[str]],
+    fake_redis: FakeRedis,
+    db_session: AsyncSession,
 ) -> None:
     """Create -> get (forced cache miss) -> get (cache hit) -> update -> list.
 
     Checks that the second GET does not hit DB and consults Redis.
     """
-    token = await register_and_login(client, "c@c.com", "secret12")
+    token = await register_and_login("c@c.com", "secret12")
     headers = {"Authorization": f"Bearer {token}"}
 
     # Create (repo.create may warm cache, so we clear it to force a miss on first GET)
@@ -73,18 +56,17 @@ async def test_order_flow_and_cache(
     order_id = uuid.UUID(order["id"])
 
     # Force cache miss on first read
-    if hasattr(fake_redis, "_data"):
-        fake_redis._data.clear()
+    fake_redis._data.clear()
 
     # Spy on DB execute calls
     execute_calls = {"count": 0}
     orig_execute = db_session.execute
 
-    async def _execute_spy(*args, **kwargs):  # type: ignore
+    async def _execute_spy(*args: Any, **kwargs: Any) -> Any:
         execute_calls["count"] += 1
         return await orig_execute(*args, **kwargs)
 
-    db_session.execute = _execute_spy  # type: ignore
+    db_session.execute = cast(Any, _execute_spy)
 
     # First GET: cache miss -> DB hit
     fake_redis.get_calls = 0
@@ -125,20 +107,19 @@ async def test_order_flow_and_cache(
     "endpoint", ["/orders/user/999/", "/orders/00000000-0000-0000-0000-000000000000/"]
 )
 async def test_auth_required(client: AsyncClient, endpoint: str) -> None:
-    """Protected endpoints must reject requests without Authorization.
-
-    FastAPI HTTPBearer with auto_error=True returns 403; some setups use 401.
-    Accept either to keep the test aligned with the chosen security policy.
-    """
+    """Protected endpoints must reject requests without Authorization."""
     r = await client.get(endpoint)
     assert r.status_code in (401, 403)
 
 
 @pytest.mark.asyncio
-async def test_order_not_found_and_forbidden(client: AsyncClient) -> None:
+async def test_order_not_found_and_forbidden(
+    client: AsyncClient,
+    register_and_login: Callable[[str, str], Awaitable[str]],
+) -> None:
     """Non-existent order returns 404; foreign user access returns 403."""
-    token1 = await register_and_login(client, "u1@x.com", "secret12")
-    token2 = await register_and_login(client, "u2@x.com", "secret12")
+    token1 = await register_and_login("u1@x.com", "secret12")
+    token2 = await register_and_login("u2@x.com", "secret12")
 
     # Non-existent
     oid = uuid.UUID("00000000-0000-0000-0000-000000000000")

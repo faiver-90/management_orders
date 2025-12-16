@@ -27,7 +27,6 @@ def sample_order() -> OrderRead:
     )
 
 
-@pytest.mark.asyncio
 async def test_cache_roundtrip(fake_redis: Redis[Any], sample_order: OrderRead) -> None:
     """Cached order should be retrievable and invalidatable."""
     assert cache_key(sample_order.id).startswith("order:")

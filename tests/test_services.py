@@ -17,7 +17,6 @@ from app.services.orders import OrdersService
 from tests.conftest import FakePublisher, FakeRedis
 
 
-@pytest.mark.asyncio
 async def test_users_repo_create_and_lookup(db_session: AsyncSession) -> None:
     repo = UsersRepository(db_session)
 
@@ -31,7 +30,6 @@ async def test_users_repo_create_and_lookup(db_session: AsyncSession) -> None:
     assert by_id is not None and by_id.email == "x@x.com"
 
 
-@pytest.mark.asyncio
 async def test_auth_service_register_and_login(db_session: AsyncSession) -> None:
     """Use a minimal payload object to avoid coupling tests to UserCreate schema details."""
     users = UsersRepository(db_session)
@@ -52,7 +50,6 @@ async def test_auth_service_register_and_login(db_session: AsyncSession) -> None
         await svc.login(payload_bad)
 
 
-@pytest.mark.asyncio
 async def test_orders_repo_cache_aside(db_session: AsyncSession, fake_redis: FakeRedis) -> None:
     repo = OrdersRepository(session=db_session, redis=fake_redis)  # type: ignore[arg-type]
 
@@ -76,7 +73,6 @@ async def test_orders_repo_cache_aside(db_session: AsyncSession, fake_redis: Fak
     assert upd.status == OrderStatus.PAID
 
 
-@pytest.mark.asyncio
 async def test_orders_service_permission_and_publish(
     db_session: AsyncSession, fake_redis: FakeRedis, fake_publisher: FakePublisher
 ) -> None:

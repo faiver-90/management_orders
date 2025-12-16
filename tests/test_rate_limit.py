@@ -10,7 +10,6 @@ from app.core import config
 from app.middleware.rate_limit import RateLimitMiddleware
 
 
-@pytest.mark.asyncio
 async def test_rate_limit_exceeded(monkeypatch: pytest.MonkeyPatch) -> None:
     """After N requests per minute, service must return 429."""
     monkeypatch.setattr(config.settings, "rate_limit_per_minute", 2)
