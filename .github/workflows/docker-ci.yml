@@ -46,6 +46,10 @@ jobs:
         run: poetry run mypy .
 
       - name: Run pytest
+        env:
+          JWT_SECRET_KEY: "test-secret-key"
+          CELERY_BROKER_URL: "redis://localhost:6379/0"
+          CELERY_RESULT_BACKEND: "redis://localhost:6379/1"
         run: poetry run pytest -q
 
       - name: Set up Docker Buildx
