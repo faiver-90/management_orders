@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 import pytest
+from faker import Faker
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,19 +16,21 @@ from tests.conftest import FakeRedis
 
 
 @pytest.mark.asyncio
-async def test_register_duplicate(client: AsyncClient) -> None:
+async def test_register_duplicate(client: AsyncClient, faker: Faker, password: str) -> None:
     """Duplicate email must be rejected."""
-    await client.post("/register/", json={"email": "a@a.com", "password": "secret12"})
-    r2 = await client.post("/register/", json={"email": "a@a.com", "password": "secret12"})
+    email = faker.unique.email()
+    await client.post("/register/", json={"email": email, "password": password})
+    r2 = await client.post("/register/", json={"email": email, "password": password})
     assert r2.status_code == 400
     assert r2.json()["detail"] == "Email already registered"
 
 
 @pytest.mark.asyncio
-async def test_login_bad_password(client: AsyncClient) -> None:
+async def test_login_bad_password(client: AsyncClient, faker: Faker, password: str) -> None:
     """Login with wrong password must fail (but schema-valid password)."""
-    await client.post("/register/", json={"email": "b@b.com", "password": "secret12"})
-    r = await client.post("/token/", json={"email": "b@b.com", "password": "wrong12"})
+    email = faker.unique.email()
+    await client.post("/register/", json={"email": email, "password": password})
+    r = await client.post("/token/", json={"email": email, "password": "wrong12"})
     assert r.status_code == 401
 
 
@@ -38,18 +41,22 @@ async def test_order_flow_and_cache(
     fake_redis: FakeRedis,
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
+    faker: Faker,
+    password: str,
+    order_items: dict[str, int],
+    order_price: float,
 ) -> None:
     """Create -> get (forced cache miss) -> get (cache hit) -> update -> list.
 
     Checks that the second GET does not hit DB and consults Redis.
     """
-    token = await register_and_login("c@c.com", "secret12")
+    token = await register_and_login(faker.unique.email(), password)
     headers = {"Authorization": f"Bearer {token}"}
 
     # Create (repo.create may warm cache, so we clear it to force a miss on first GET)
     create = await client.post(
         "/orders/",
-        json={"items": {"sku": "x"}, "total_price": 12.5},
+        json={"items": order_items, "total_price": order_price},
         headers=headers,
     )
     assert create.status_code == 200
@@ -117,10 +124,12 @@ async def test_auth_required(client: AsyncClient, endpoint: str) -> None:
 async def test_order_not_found_and_forbidden(
     client: AsyncClient,
     register_and_login: Callable[[str, str], Awaitable[str]],
+    faker: Faker,
+    password: str,
 ) -> None:
     """Non-existent order returns 404; foreign user access returns 403."""
-    token1 = await register_and_login("u1@x.com", "secret12")
-    token2 = await register_and_login("u2@x.com", "secret12")
+    token1 = await register_and_login(faker.unique.email(), password)
+    token2 = await register_and_login(faker.unique.email(), password)
 
     # Non-existent
     oid = uuid.UUID("00000000-0000-0000-0000-000000000000")

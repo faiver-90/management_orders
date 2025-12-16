@@ -45,6 +45,8 @@ class Settings(BaseSettings):
     celery_broker_url: AnyUrl = Field(alias="CELERY_BROKER_URL")
     celery_result_backend: str = Field(alias="CELERY_RESULT_BACKEND")
 
+    cache_ttl_seconds: int = Field(300, alias="CACHE_TTL_SECONDS")
+
     @property
     def database_dsn(self) -> str:
         """Return SQLAlchemy async DSN for PostgreSQL."""

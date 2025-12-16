@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 import pytest
+from faker import Faker
 
 from app.core.security import create_access_token, decode_token, hash_password, verify_password
 
 
-@pytest.mark.parametrize("password", ["secret12", "another-secret"])
-def test_password_hash_and_verify(password: str) -> None:
+def test_password_hash_and_verify(faker: Faker) -> None:
     """Password hashing must verify correctly and fail for different password."""
+    password = f"Secret{faker.random_int(min=10_000, max=99_999)}"
+    other = password + "x"
+
     h = hash_password(password)
     assert verify_password(password, h) is True
-    assert verify_password(password + "x", h) is False
+    assert verify_password(other, h) is False
 
 
 def test_jwt_roundtrip() -> None:

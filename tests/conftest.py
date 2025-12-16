@@ -15,6 +15,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any, cast
 
 import pytest
+from faker import Faker
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -44,13 +45,13 @@ class FakeRedis:
         self.get_calls += 1
         return self._data.get(key)
 
-    async def setex(self, key: str, ttl: int, value: str) -> None:
+    async def setex(self, *, name: str, time: int, value: str) -> None:
         self.setex_calls += 1
-        self._data[key] = value
+        self._data[name] = value
 
-    async def delete(self, key: str) -> None:
+    async def delete(self, key: str) -> int:
         self.delete_calls += 1
-        self._data.pop(key, None)
+        return 1 if self._data.pop(key, None) is not None else 0
 
     async def aclose(self) -> None:
         return None
@@ -64,6 +65,41 @@ class FakePublisher:
 
     async def publish_new_order(self, order_id) -> None:  # type: ignore
         self.published.append(str(order_id))
+
+
+@pytest.fixture()
+def faker() -> Faker:
+    """Deterministic Faker instance (per-test)."""
+    f = Faker()
+    f.seed_instance(42)
+    return f
+
+
+@pytest.fixture()
+def email(faker: Faker) -> Any:
+    """Schema-valid email for auth tests."""
+    return faker.unique.email()
+
+
+@pytest.fixture()
+def password(faker: Faker) -> str:
+    """Schema-valid password for auth tests."""
+    return f"Secret{faker.random_int(min=10_000, max=99_999)}"
+
+
+@pytest.fixture()
+def order_items(faker: Faker) -> dict[str, int]:
+    """Order items payload with realistic SKU/qty."""
+    sku = f"sku-{faker.random_int(min=100, max=999)}"
+    qty = faker.random_int(min=1, max=5)
+    return {sku: qty}
+
+
+@pytest.fixture()
+def order_price(faker: Faker) -> float:
+    """Order total price as a realistic decimal float."""
+    cents = faker.random_int(min=999, max=99_999)  # 9.99 .. 999.99
+    return round(cents / 100.0, 2)
 
 
 @pytest.fixture()
