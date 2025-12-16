@@ -121,3 +121,37 @@ tasks:
       - 'git commit -m "{{.MSG}}" --no-verify'
       - "git push"
       - 'echo "Коммит успешно выполнен и отправлен."'
+
+  docker:login:
+    desc: Login to Docker Hub
+    cmds:
+      - docker login
+
+  docker:build:
+    desc: Build Docker image
+    cmds:
+      - docker build -t {{.DOCKERHUB_USER}}/{{.MSG}}:{{.TAG}} .
+
+  docker:tag:latest:
+    desc: Tag image as latest
+    cmds:
+      - docker tag {{.DOCKERHUB_USER}}/{{.MSG}}:{{.TAG}} {{.DOCKERHUB_USER}}/{{.MSG}}:latest
+
+  docker:push:
+    desc: Push Docker image with version tag
+    cmds:
+      - docker push {{.DOCKERHUB_USER}}/{{.MSG}}:{{.TAG}}
+
+  docker:push:latest:
+    desc: Push Docker image with latest tag
+    cmds:
+      - docker push {{.DOCKERHUB_USER}}/{{.MSG}}:latest
+
+  docker:release:
+    desc: Build and push version + latest
+    deps:
+      - docker:build
+      - docker:tag:latest
+    cmds:
+      - task docker:push
+      - task docker:push:latest
