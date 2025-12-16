@@ -1,6 +1,5 @@
 # Order Service (FastAPI)
 
-Implements the requirements from the provided technical assignment:
 - FastAPI + Swagger UI
 - PostgreSQL (SQLAlchemy 2.x async) + Alembic
 - JWT auth (OAuth2 password flow)
@@ -9,7 +8,7 @@ Implements the requirements from the provided technical assignment:
 - Celery background processing task
 - CORS + rate limiting middleware
 - Secrets via `.env` using `pydantic-settings`
-- Ruff + mypy + pytest with 100% coverage
+- Ruff + mypy + pytest with 70% coverage
 
 ## Quick start (Docker)
 

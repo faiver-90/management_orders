@@ -76,7 +76,7 @@ def get_publisher() -> Publisher:
 
 
 async def get_current_user_id(
-    token: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    token: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
 ) -> int:
     """
     Extract current user id from the Authorization header (JWT bearer token).
@@ -91,6 +91,8 @@ async def get_current_user_id(
         HTTPException: 401 if token is invalid or subject is not an int.
     """
     try:
+        if token is None:
+            raise HTTPException(status_code=401, detail="Not authenticated")
         jwt_token = token.credentials
         subject = decode_token(jwt_token)
         return int(subject)
@@ -98,7 +100,7 @@ async def get_current_user_id(
         raise HTTPException(status_code=401, detail="Invalid authentication credentials") from err
 
 
-def get_orders_repo(session: SessionDep, redis: RedisDep) -> OrdersRepository:
+def get_orders_repo(session: SessionDep, redis: RedisDep) -> OrdersRepository:  # type: ignore
     """
     Build OrdersRepository.
 
@@ -161,6 +163,6 @@ def get_orders_service(
 
 AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
-RedisDep: TypeAlias = Annotated[Redis[Any], Depends(get_redis)]
+RedisDep: TypeAlias = Annotated[Redis, Depends(get_redis)]
 UserIdDep = Annotated[int, Depends(get_current_user_id)]
 OrdersServiceDep = Annotated[OrdersService, Depends(get_orders_service)]

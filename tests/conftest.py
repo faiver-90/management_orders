@@ -1,4 +1,13 @@
-"""Pytest fixtures for the service."""
+"""Pytest fixtures for the service.
+
+This test suite uses an in-memory SQLite database and lightweight fakes for Redis
+and messaging to keep tests deterministic and fast.
+
+Notes about FastAPI-Limiter:
+- The production app uses `fastapi-limiter` on some auth endpoints.
+- In unit/integration tests we strip those dependencies from routes to avoid
+  requiring a real Redis instance that supports Lua scripts.
+"""
 
 from __future__ import annotations
 
@@ -14,18 +23,32 @@ from app.main import app
 
 
 class FakeRedis:
-    """In-memory async Redis substitute."""
+    """In-memory async Redis substitute with call counters.
+
+    This fake implements a minimal subset used by app cache helpers:
+    - get
+    - setex
+    - delete
+
+    It also tracks call counts so tests can assert cache hits.
+    """
 
     def __init__(self) -> None:
         self._data: dict[str, str] = {}
+        self.get_calls: int = 0
+        self.setex_calls: int = 0
+        self.delete_calls: int = 0
 
     async def get(self, key: str) -> str | None:
+        self.get_calls += 1
         return self._data.get(key)
 
     async def setex(self, key: str, ttl: int, value: str) -> None:
+        self.setex_calls += 1
         self._data[key] = value
 
     async def delete(self, key: str) -> None:
+        self.delete_calls += 1
         self._data.pop(key, None)
 
     async def aclose(self) -> None:
@@ -33,7 +56,7 @@ class FakeRedis:
 
 
 class FakePublisher:
-    """Publisher stub for tests."""
+    """Publisher stub for tests collecting published events."""
 
     def __init__(self) -> None:
         self.published: list[str] = []
@@ -74,11 +97,34 @@ def fake_publisher() -> FakePublisher:
     return FakePublisher()
 
 
+def _strip_fastapi_limiter_dependencies() -> None:
+    """Remove fastapi-limiter dependencies from all routes (test-only).
+
+    The `RateLimiter` dependency requires FastAPILimiter.init + a real Redis
+    supporting Lua scripts. For tests we validate application behavior without
+    exercising fastapi-limiter itself.
+    """
+    for route in getattr(app.router, "routes", []):
+        dependant = getattr(route, "dependant", None)
+        if dependant is None:
+            continue
+        # Keep non-limiter dependencies intact
+        new_deps = []
+        for dep in dependant.dependencies:
+            call = getattr(dep, "call", None)
+            # fastapi-limiter creates a callable with class name "RateLimiter"
+            if call is not None and call.__class__.__name__ == "RateLimiter":
+                continue
+            new_deps.append(dep)
+        dependant.dependencies = new_deps
+
+
 @pytest.fixture()
 async def client(
     db_session: AsyncSession, fake_redis: FakeRedis, fake_publisher: FakePublisher
 ) -> AsyncIterator[AsyncClient]:
     """HTTP client with dependency overrides."""
+    _strip_fastapi_limiter_dependencies()
 
     async def _get_session_override() -> AsyncIterator[AsyncSession]:
         yield db_session
@@ -86,13 +132,16 @@ async def client(
     async def _get_redis_override() -> AsyncIterator[FakeRedis]:
         yield fake_redis
 
+    def _get_publisher_override() -> FakePublisher:
+        return fake_publisher
+
     app.dependency_overrides[deps.get_session] = _get_session_override  # type: ignore
     app.dependency_overrides[deps.get_redis] = _get_redis_override
+    # If deps.get_publisher exists, override it (preferred to patching modules).
+    if hasattr(deps, "get_publisher"):
+        app.dependency_overrides[deps.get_publisher] = _get_publisher_override
 
-    # Patch publisher factory used inside the orders router module.
-    from app.api.routes import orders as orders_routes  # local import for test patching
-
-    orders_routes.get_publisher = lambda: fake_publisher  # type: ignore
+    # Ensure app lifespan events run (if any)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac

@@ -11,7 +11,7 @@ from passlib.context import CryptContext
 
 from app.core.config import settings
 
-security = HTTPBearer(auto_error=True)
+security = HTTPBearer(auto_error=False)
 
 pwd_context = CryptContext(
     schemes=["argon2"],
