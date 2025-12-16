@@ -12,7 +12,9 @@ from fastapi_limiter import FastAPILimiter
 
 from app.api.routes.auth import router as auth_router
 from app.api.routes.orders import router as orders_router
-from app.core.config import settings
+from app.core.config import get_settings
+
+settings = get_settings()
 
 
 @asynccontextmanager

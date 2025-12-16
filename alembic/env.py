@@ -20,8 +20,10 @@ if str(ROOT_DIR) not in sys.path:
 
 
 from alembic import context
-from app.core.config import settings
+from app.core.config import get_settings
 from app.db.models import Base
+
+settings = get_settings()
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_dsn)

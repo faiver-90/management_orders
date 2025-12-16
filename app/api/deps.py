@@ -25,7 +25,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.config import get_settings
 from app.core.security import decode_token, security
 from app.db.session import get_session
 from app.repositories.orders import OrdersRepository
@@ -33,6 +33,8 @@ from app.repositories.users import UsersRepository
 from app.services.auth import AuthService
 from app.services.messaging import Publisher, RabbitPublisher
 from app.services.orders import OrdersService
+
+settings = get_settings()
 
 
 async def get_redis() -> AsyncGenerator[Redis[Any], None]:

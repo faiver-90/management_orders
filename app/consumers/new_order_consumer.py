@@ -10,8 +10,10 @@ from typing import Any
 import aio_pika
 from aio_pika.abc import AbstractIncomingMessage
 
-from app.core.config import settings
+from app.core.config import get_settings
 from app.tasks.worker_tasks import process_order
+
+settings = get_settings()
 
 
 async def handle_message(message: AbstractIncomingMessage) -> None:

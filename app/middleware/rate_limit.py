@@ -12,7 +12,9 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import JSONResponse
 
-from app.core.config import settings
+from app.core.config import get_settings
+
+settings = get_settings()
 
 
 @dataclass(frozen=True)
