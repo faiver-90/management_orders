@@ -1,7 +1,9 @@
 """Authentication endpoints: /register/ and /token/."""
+
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi_limiter.depends import RateLimiter
 from sqlalchemy import select
 
 from app.api.deps import SessionDep
@@ -12,10 +14,15 @@ from app.schemas.auth import Token, UserCreate, UserRead
 router = APIRouter(tags=["auth"])
 
 
-@router.post("/register/", response_model=UserRead)
-async def register_user(session: SessionDep, payload: UserCreate,
-
-) -> UserRead:
+@router.post(
+    "/register/",
+    response_model=UserRead,
+    dependencies=[
+        Depends(RateLimiter(times=5, seconds=60)),  # 5 в минуту
+        Depends(RateLimiter(times=100, seconds=3600)),  # 100 в час
+    ],
+)
+async def register_user(session: SessionDep, payload: UserCreate) -> UserRead:
     """Register a user by email/password."""
     stmt = select(User).where(User.email == payload.email)
     existing = (await session.execute(stmt)).scalar_one_or_none()
@@ -28,7 +35,14 @@ async def register_user(session: SessionDep, payload: UserCreate,
     return UserRead(id=user.id, email=user.email)
 
 
-@router.post("/token/", response_model=Token)
+@router.post(
+    "/token/",
+    response_model=Token,
+    dependencies=[
+        Depends(RateLimiter(times=5, seconds=60)),  # 5 в минуту
+        Depends(RateLimiter(times=100, seconds=3600)),  # 100 в час
+    ],
+)
 async def login_for_access_token(
     session: SessionDep,
     payload: UserCreate,

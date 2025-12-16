@@ -1,4 +1,5 @@
 """Tests for Redis caching helpers."""
+
 from __future__ import annotations
 
 import uuid

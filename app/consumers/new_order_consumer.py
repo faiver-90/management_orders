@@ -1,4 +1,5 @@
 """RabbitMQ consumer that forwards `new_order` events to Celery."""
+
 from __future__ import annotations
 
 import asyncio

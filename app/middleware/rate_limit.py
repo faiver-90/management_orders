@@ -2,6 +2,7 @@
 
 This intentionally avoids external state for simplicity. In production, a distributed limiter is recommended.
 """
+
 from __future__ import annotations
 
 import time
@@ -17,14 +18,16 @@ from app.core.config import settings
 @dataclass(frozen=True)
 class Bucket:
     """Token bucket state for one client."""
+
     reset_at: float
     count: int
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Middleware that blocks requests above a per-minute limit."""
+
     def __init__(self, app: object) -> None:
-        super().__init__(app) # type: ignore
+        super().__init__(app)  # type: ignore
         self._buckets: dict[str, Bucket] = {}
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:

@@ -55,6 +55,12 @@ services:
     env_file:
       - ./.env
     command: ["python", "-m", "app.consumers.new_order_consumer"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -68,41 +74,11 @@ services:
     depends_on:
       postgres:
         condition: service_started
-    command: |
-      sh -exc '
-      python - << "PY"
-      import os
-      import time
-      import sys
-      import asyncio
-      import asyncpg
-      
-      host = os.getenv("POSTGRES_HOST", "postgres")
-      port = int(os.getenv("POSTGRES_PORT", "5432"))
-      db   = os.getenv("POSTGRES_DB", "orders")
-      user = os.getenv("POSTGRES_USER", "orders")
-      pw   = os.getenv("POSTGRES_PASSWORD", "orders")
-      
-      dsn = f"postgresql://{user}:{pw}@{host}:{port}/{db}"
-      
-      async def main():
-          deadline = time.time() + 60
-          last = None
-          while time.time() < deadline:
-              try:
-                  conn = await asyncpg.connect(dsn)
-                  await conn.close()
-                  print("Postgres is ready")
-                  return
-              except Exception as e:
-                  last = e
-                  await asyncio.sleep(1)
-          print("Postgres not ready:", repr(last))
-          sys.exit(1)
-      
-      asyncio.run(main())
-      PY
-      
-            python -m alembic upgrade head
-          '
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready", "-d", "db_prod" ]
+      interval: 30s
+      timeout: 60s
+      retries: 5
+      start_period: 80s
+    command: ["python", "-m", "app.db.migrate_script"]
     restart: "no"

@@ -36,6 +36,7 @@ dependencies = [
     "types-redis>=4.6.0.20241004",
     "types-passlib>=1.7.7.20240819",
     "types-python-jose>=3.3.4.20240106",
+    "fastapi-limiter (>=0.1.6,<0.2.0)",
 ]
 
 [tool.poetry]

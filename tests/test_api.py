@@ -1,4 +1,5 @@
 """End-to-end tests for API endpoints."""
+
 from __future__ import annotations
 
 import uuid
@@ -54,7 +55,9 @@ async def test_order_flow_and_cache(client: AsyncClient) -> None:
     headers = {"Authorization": f"Bearer {token}"}
 
     # Create
-    create = await client.post("/orders/", json={"items": {"sku": "x"}, "total_price": 12.5}, headers=headers)
+    create = await client.post(
+        "/orders/", json={"items": {"sku": "x"}, "total_price": 12.5}, headers=headers
+    )
     assert create.status_code == 200
     order: dict[str, Any] = create.json()
     order_id = uuid.UUID(order["id"])
@@ -70,7 +73,9 @@ async def test_order_flow_and_cache(client: AsyncClient) -> None:
     assert r2.json() == r1.json()
 
     # Update status
-    upd = await client.patch(f"/orders/{order_id}/", json={"status": OrderStatus.PAID}, headers=headers)
+    upd = await client.patch(
+        f"/orders/{order_id}/", json={"status": OrderStatus.PAID}, headers=headers
+    )
     assert upd.status_code == 200
     assert upd.json()["status"] == OrderStatus.PAID
 
@@ -82,7 +87,9 @@ async def test_order_flow_and_cache(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("endpoint", ["/orders/user/999/", "/orders/00000000-0000-0000-0000-000000000000/"])
+@pytest.mark.parametrize(
+    "endpoint", ["/orders/user/999/", "/orders/00000000-0000-0000-0000-000000000000/"]
+)
 async def test_auth_required(client: AsyncClient, endpoint: str) -> None:
     """Endpoints that require auth must return 401 when missing token."""
     r = await client.get(endpoint)
@@ -122,5 +129,7 @@ async def test_order_not_found_and_forbidden(client: AsyncClient) -> None:
 
     # List forbidden
     user1_id = int(create.json()["user_id"])
-    lst_forb = await client.get(f"/orders/user/{user1_id}/", headers={"Authorization": f"Bearer {token2}"})
+    lst_forb = await client.get(
+        f"/orders/user/{user1_id}/", headers={"Authorization": f"Bearer {token2}"}
+    )
     assert lst_forb.status_code == 403

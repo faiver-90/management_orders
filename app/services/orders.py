@@ -1,4 +1,5 @@
 """Order business logic and repository-like operations."""
+
 from __future__ import annotations
 
 import uuid
@@ -11,9 +12,13 @@ from app.schemas.orders import OrderCreate, OrderRead, OrderUpdateStatus
 from app.services.messaging import Publisher
 
 
-async def create_order(session: AsyncSession, user_id: int, data: OrderCreate, publisher: Publisher) -> OrderRead:
+async def create_order(
+    session: AsyncSession, user_id: int, data: OrderCreate, publisher: Publisher
+) -> OrderRead:
     """Create an order, persist it, and publish `new_order` event."""
-    order = Order(user_id=user_id, items=data.items, total_price=data.total_price, status=OrderStatus.PENDING)
+    order = Order(
+        user_id=user_id, items=data.items, total_price=data.total_price, status=OrderStatus.PENDING
+    )
     session.add(order)
     await session.commit()
     await session.refresh(order)
@@ -31,7 +36,9 @@ async def get_order(session: AsyncSession, order_id: uuid.UUID) -> OrderRead:
     return OrderRead.model_validate(order, from_attributes=True)
 
 
-async def update_order_status(session: AsyncSession, order_id: uuid.UUID, data: OrderUpdateStatus) -> OrderRead:
+async def update_order_status(
+    session: AsyncSession, order_id: uuid.UUID, data: OrderUpdateStatus
+) -> OrderRead:
     """Update order status; raise ValueError if order does not exist."""
     stmt = select(Order).where(Order.id == order_id)
     res = await session.execute(stmt)

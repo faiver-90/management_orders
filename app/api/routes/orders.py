@@ -1,8 +1,8 @@
 """Order endpoints with auth, Redis caching, and messaging."""
+
 from __future__ import annotations
 
 import uuid
-from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
@@ -27,7 +27,9 @@ async def create_order_endpoint(
 
 
 @router.get("/orders/{order_id}/", response_model=OrderRead)
-async def get_order_endpoint(order_id: uuid.UUID, session: SessionDep, redis: RedisDep, user_id: UserIdDep) -> OrderRead: # type: ignore[type-arg]
+async def get_order_endpoint(
+    order_id: uuid.UUID, session: SessionDep, redis: RedisDep, user_id: UserIdDep
+) -> OrderRead:  # type: ignore[type-arg]
     """Get order by id; first try Redis cache."""
     cached = await get_cached_order(redis, order_id)
     if cached is not None:
@@ -44,7 +46,11 @@ async def get_order_endpoint(order_id: uuid.UUID, session: SessionDep, redis: Re
 
 @router.patch("/orders/{order_id}/", response_model=OrderRead)
 async def update_order_endpoint(
-    order_id: uuid.UUID, payload: OrderUpdateStatus, session: SessionDep, redis: RedisDep, user_id: UserIdDep # type: ignore[type-arg]
+    order_id: uuid.UUID,
+    payload: OrderUpdateStatus,
+    session: SessionDep,
+    redis: RedisDep,
+    user_id: UserIdDep,  # type: ignore[type-arg]
 ) -> OrderRead:
     """Update order status and refresh cache."""
     try:
@@ -60,7 +66,9 @@ async def update_order_endpoint(
 
 
 @router.get("/orders/user/{user_id}/", response_model=OrdersList)
-async def list_user_orders_endpoint(user_id: int, session: SessionDep, current_user_id: UserIdDep) -> OrdersList:
+async def list_user_orders_endpoint(
+    user_id: int, session: SessionDep, current_user_id: UserIdDep
+) -> OrdersList:
     """List orders for a user; only the user themselves may view the list."""
     if user_id != current_user_id:
         raise HTTPException(status_code=403, detail="Forbidden")

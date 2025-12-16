@@ -1,4 +1,5 @@
 """Tests for messaging serialization and publisher protocol usage."""
+
 from __future__ import annotations
 
 import uuid

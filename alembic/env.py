@@ -2,6 +2,7 @@
 
 Reads DB connection settings from `.env` via `app.core.config.settings`.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -16,7 +17,6 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
-
 
 
 from alembic import context

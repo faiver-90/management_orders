@@ -1,4 +1,5 @@
 """Redis-based cache for order retrieval."""
+
 from __future__ import annotations
 
 import json

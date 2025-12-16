@@ -1,4 +1,5 @@
 """RabbitMQ messaging helpers for publishing `new_order` events."""
+
 from __future__ import annotations
 
 import json
@@ -12,6 +13,7 @@ import aio_pika
 @dataclass(frozen=True)
 class NewOrderEvent:
     """Message payload for `new_order`."""
+
     order_id: uuid.UUID
 
     def to_bytes(self) -> bytes:
@@ -28,6 +30,7 @@ class Publisher(Protocol):
 
 class RabbitPublisher:
     """RabbitMQ publisher implementation."""
+
     def __init__(self, dsn: str, queue_name: str) -> None:
         self._dsn = dsn
         self._queue_name = queue_name
@@ -38,5 +41,8 @@ class RabbitPublisher:
         async with connection:
             channel = await connection.channel()
             await channel.declare_queue(self._queue_name, durable=True)
-            message = aio_pika.Message(body=NewOrderEvent(order_id).to_bytes(), delivery_mode=aio_pika.DeliveryMode.PERSISTENT)
+            message = aio_pika.Message(
+                body=NewOrderEvent(order_id).to_bytes(),
+                delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
+            )
             await channel.default_exchange.publish(message, routing_key=self._queue_name)

@@ -1,4 +1,5 @@
 """Pytest fixtures for the service."""
+
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
@@ -14,6 +15,7 @@ from app.main import app
 
 class FakeRedis:
     """In-memory async Redis substitute."""
+
     def __init__(self) -> None:
         self._data: dict[str, str] = {}
 
@@ -32,6 +34,7 @@ class FakeRedis:
 
 class FakePublisher:
     """Publisher stub for tests."""
+
     def __init__(self) -> None:
         self.published: list[str] = []
 
@@ -51,7 +54,9 @@ async def session_maker() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
 
 
 @pytest.fixture()
-async def db_session(session_maker: async_sessionmaker[AsyncSession]) -> AsyncIterator[AsyncSession]:
+async def db_session(
+    session_maker: async_sessionmaker[AsyncSession],
+) -> AsyncIterator[AsyncSession]:
     """Provide a transactional session."""
     async with session_maker() as session:
         yield session
@@ -70,20 +75,23 @@ def fake_publisher() -> FakePublisher:
 
 
 @pytest.fixture()
-async def client(db_session: AsyncSession, fake_redis: FakeRedis, fake_publisher: FakePublisher) -> AsyncIterator[AsyncClient]:
+async def client(
+    db_session: AsyncSession, fake_redis: FakeRedis, fake_publisher: FakePublisher
+) -> AsyncIterator[AsyncClient]:
     """HTTP client with dependency overrides."""
+
     async def _get_session_override() -> AsyncIterator[AsyncSession]:
         yield db_session
 
     async def _get_redis_override() -> AsyncIterator[FakeRedis]:
         yield fake_redis
 
-    app.dependency_overrides[deps.get_session] = _get_session_override # type: ignore
+    app.dependency_overrides[deps.get_session] = _get_session_override  # type: ignore
     app.dependency_overrides[deps.get_redis] = _get_redis_override
-
 
     # Patch publisher factory used inside the orders router module.
     from app.api.routes import orders as orders_routes  # local import for test patching
+
     orders_routes.get_publisher = lambda: fake_publisher  # type: ignore
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:

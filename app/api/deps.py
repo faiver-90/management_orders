@@ -1,4 +1,5 @@
 """FastAPI dependencies: DB session, Redis client, auth user extraction, publisher."""
+
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
@@ -31,13 +32,14 @@ async def get_redis() -> AsyncGenerator[Redis[Any], None]:
             await res
 
 
-
 def get_publisher() -> Publisher:
     """Return RabbitMQ publisher (stateless factory)."""
     return RabbitPublisher(settings.rabbitmq_dsn, settings.rabbitmq_queue)
 
 
-async def get_current_user_id(token: Annotated[HTTPAuthorizationCredentials, Depends(security)]) -> int:
+async def get_current_user_id(
+    token: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+) -> int:
     """Extract current user id from JWT token."""
     try:
         jwt_token = token.credentials

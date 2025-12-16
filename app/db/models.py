@@ -1,4 +1,5 @@
 """SQLAlchemy ORM models."""
+
 from __future__ import annotations
 
 import enum
@@ -6,7 +7,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String, JSON
+from sqlalchemy import JSON, DateTime, Enum, Float, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -17,6 +18,7 @@ class Base(DeclarativeBase):
 
 class User(Base):
     """User account used for authentication."""
+
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -28,6 +30,7 @@ class User(Base):
 
 class OrderStatus(str, enum.Enum):
     """Allowed order statuses."""
+
     PENDING = "PENDING"
     PAID = "PAID"
     SHIPPED = "SHIPPED"
@@ -36,6 +39,7 @@ class OrderStatus(str, enum.Enum):
 
 class Order(Base):
     """Order stored in the database."""
+
     __tablename__ = "orders"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -45,7 +49,11 @@ class Order(Base):
         nullable=False,
     )
     total_price: Mapped[float] = mapped_column(Float, nullable=False)
-    status: Mapped[OrderStatus] = mapped_column(Enum(OrderStatus), default=OrderStatus.PENDING, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(tz=UTC))
+    status: Mapped[OrderStatus] = mapped_column(
+        Enum(OrderStatus), default=OrderStatus.PENDING, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(tz=UTC)
+    )
 
     user: Mapped[User] = relationship(back_populates="orders")
