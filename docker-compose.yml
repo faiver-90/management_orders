@@ -1,6 +1,6 @@
 services:
   api:
-    build: .
+    image: faiver90/orders:latest
     volumes:
       - ./app:/app/app
     env_file:
@@ -39,7 +39,7 @@ services:
       retries: 20
 
   celery-worker:
-    build: .
+    image: faiver90/orders:latest
     env_file:
       - ./.env
     command: ["python", "-m", "celery", "-A", "app.tasks.celery_app:celery_app", "worker", "-l", "INFO"]
@@ -51,7 +51,7 @@ services:
 
 
   consumer:
-    build: .
+    image: faiver90/orders:latest
     env_file:
       - ./.env
     command: ["python", "-m", "app.consumers.new_order_consumer"]
@@ -68,7 +68,7 @@ services:
         condition: service_started
 
   migrate:
-    build: .
+    image: faiver90/orders:latest
     env_file:
       - ./.env
     depends_on:
